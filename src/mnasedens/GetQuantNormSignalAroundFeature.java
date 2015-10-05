@@ -43,7 +43,7 @@ public class GetQuantNormSignalAroundFeature {
 	public static double[] get_feature_output(TF t, double[] mat, int win){
 		
 		// Set up the storage output
-		double[] total_sig = new double[mat.length];
+		double[] total_sig = new double[2*win + 1];
 		
 		// Set the signal idx
 		int sig_idx = 0;
