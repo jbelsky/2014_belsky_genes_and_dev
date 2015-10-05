@@ -97,7 +97,7 @@ public class GetQuantNormSignalAroundFeature {
 		// Write the header
 		output.write("name,chr,pos,strand,");
 		String sep = ",";
-		for(int i = -win; i <= win; win++){
+		for(int i = -win; i <= win; i++){
 			if(i == win){
 				sep = "\n";
 			}
