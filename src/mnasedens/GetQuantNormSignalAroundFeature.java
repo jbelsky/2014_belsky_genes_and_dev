@@ -4,152 +4,89 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
-import functions.BAMInput;
-import functions.TF;
+import jbfunctions.BAMInput;
+import jbfunctions.TF;
 
 
-public class GetTotalQuantNormSignalAroundFeature {
+public class GetQuantNormSignalAroundFeature {
 
-	public static double[][] get_chr_density(String[] file_names, String footer2, String ref_bam_file, String chr) throws IOException{
+	public static double[] get_chr_density(String file_name, String ref_bam_file, String chr) throws IOException{
 		
 		// Get the chr length
 		int chr_length = BAMInput.get_chr_length(ref_bam_file, chr);
 		
 		// Create the storage double
-		double[][] mat = new double[file_names.length][chr_length + 1];
+		double[] mat = new double[chr_length + 1];
 		
-		// Iterate through each file name
-		for(int f = 0; f < file_names.length; f++){
+		// Read in the relevant file
+		BufferedReader input = new BufferedReader(new FileReader(file_name));
 			
-			// Read in the relevant file
-			BufferedReader input = new BufferedReader(new FileReader(file_names[f] + "_" + chr + "_" + footer2));
+		// Read in the header
+		input.readLine();
 			
-			// Read in the header
-			input.readLine();
-			
-			// Enter into the storage array
-			for(int i = 1; i < mat[0].length; i++){
-				String[] line_arr = input.readLine().split(",");
-				mat[f][i] = Double.parseDouble(line_arr[2]);
-			}
-			
-			// Close the buffer
-			input.close();
-			
+		// Enter into the storage array
+		for(int i = 1; i < mat.length; i++){
+			String[] line_arr = input.readLine().split(",");
+			mat[i] = Double.parseDouble(line_arr[2]);
 		}
+			
+		// Close the buffer
+		input.close();
 		
 		// Return the storage matrix
-		return(mat);
-		
+		return(mat);		
 		
 	}
 	
-	public static double[] get_total_signal_per_feature(TF t, int l_win, int r_win, double[][] mat){
+	public static double[] get_feature_output(TF t, double[] mat, int win){
 		
 		// Set up the storage output
 		double[] total_sig = new double[mat.length];
+		
+		// Set the signal idx
+		int sig_idx = 0;
 		
 		// Get the position
 		int pos = t.getPos();
 		
 		// Set the start and end positions
-		int start = pos - l_win;
-		int end = pos + r_win;
+		int start = pos - win;
+		int end = pos + win;
 		
-		// If the strand is negative, flip the start and end
-		if(t.getStrand() == '-'){
-			start = pos - r_win;
-			end = pos + l_win;
-		}
-		
-		// Get the total signal over the range for each dataset
-		for(int a = 0; a < total_sig.length; a++){
-			for(int p = start; p <= end; p++){
-				if(p >= 0 && p < mat[a].length){
-					total_sig[a] += mat[a][p];
-				}
+		// Iterate through the positions
+		for(int p = start; p <= end; p++){
+			
+			// If p goes outside the boundary of the chromosome ends, enter a -1
+			if(p < 1 || p >= total_sig.length){
+				total_sig[sig_idx] = -1;
+			}else{
+				total_sig[sig_idx] = mat[p];
 			}
 			
-			// Ensure that the total_sig is at least 0
-			if(total_sig[a] < 0){
-				total_sig[a] = 0;
-			}
+			// Increment the sig_idx
+			sig_idx++;
 			
 		}
+
 		
 		// Return the storage output
 		return(total_sig);
 		
 	}
-	
-	public static String get_output_string(TF t, double[] total_sig){
 		
-		// Set the output DecimalFormat
-		DecimalFormat df = new DecimalFormat("#.####");
-		
-		// Set the header string
-		String output_string = t.getName() + "," +
-							   t.getChr() + "," +
-							   t.getPos() + "," +
-							   t.getStrand() + ",";
-		
-		// Iterate through the total_sig
-		for(int a = 0; a < total_sig.length; a++){
-			String sep = ",";
-			if(a == total_sig.length - 1){
-				sep = "\n";
-			}
-			output_string += df.format(total_sig[a]) + sep;
-		}
-		
-		// Return the output string
-		return(output_string);
-		
-	}
-	
 	public static void main(String[] args) throws IOException {
 
-		// Set the string headers
-		String[] dataset_header = {"orc_chip_seq_dm265",
-					   "orc_chip_seq_dm287",
-					   "input_chip_seq_dm271_orc",
-					   "input_chip_seq_dm272_orc"
-					  };
+		// Set the string header
+		String dataset_header = args[0];
+		String dataset_footer = args[1];		
+		String input_feature_file = args[2];
+		String output_file_name = args[3];
+		String bam_file_name = args[4];
+		int win = Integer.parseInt(args[5]);
 				
-		// Set the directory
-		String dataset_dir = "/data/data2/jab112/2014_mnase_manuscript/datasets/chip_data/orc/quant_normalize/";
-		
-		// Set the footers
-		String footer1 = "density_signal_chr";
-		String footer2 = "quant_normalize.csv";
-		
-		// Set the input feature file name
-		String input_feature_file = 
-			"/data/data2/jab112/2014_mnase_manuscript/datasets/jab112_yeast_feature_files/replication_origins/" +
-			"oridb_acs_feature_file_curated_798_sites_timing_whitehouse_raw_oem.csv";
-			
-		// Set the window
-		int left_win = 400;
-		int right_win = 400;
-		
-		// Set the output file name
-		String output_file_name = 
-			"/data/data2/jab112/2014_mnase_manuscript/figures/figure_3/figure_3_datasets/" +
-			"oridb_acs_feature_file_curated_798_sites_orc_chip_seq_" + 
-			"left_win_" + left_win + "bp_right_win_" + right_win + "bp.csv";				  
-		
-		// Set a reference bam file name
-		String bam_file_name = "/data/illumina_pipeline/aligned_experiments/DM242/dm242.bam";
-		
 		////////////////////////////////////////////////////////////////////////////////////
-		// Set the file names
-		String[] input_file_name_arr = new String[dataset_header.length];
-		for(int h = 0; h < input_file_name_arr.length; h++){
-			input_file_name_arr[h] = dataset_dir + dataset_header[h] + "_" + footer1;
-		}
 		
 		// Get the TF HashMap
 		HashMap<String, ArrayList<TF>> tf_map = TF.read_in_tf_map(input_feature_file);
@@ -159,23 +96,23 @@ public class GetTotalQuantNormSignalAroundFeature {
 		
 		// Write the header
 		output.write("name,chr,pos,strand,");
-		
-		for(int h = 0; h < dataset_header.length; h++){
-			String sep = ",";
-			if(h == dataset_header.length - 1){
+		String sep = ",";
+		for(int i = -win; i <= win; win++){
+			if(i == win){
 				sep = "\n";
 			}
-			output.write(dataset_header[h] + sep);
+			output.write(i + sep);
 		}
 		
-		// Iterate through each TF
+		// Iterate through each chromosome
 		for(int c = 1; c <= 16; c++){
+			
+			// Set the filename
+			String file_name = dataset_header + c + dataset_footer;
 			
 			// Get the double array
 			System.out.println("Reading in the data for chr " + c + "...");
-			double[][] input_data = get_chr_density(input_file_name_arr, footer2, 
-													bam_file_name, Integer.toString(c)
-												   );
+			double[] input_data = get_chr_density(file_name, bam_file_name, Integer.toString(c));
 					
 			// Get the tf_list on the chr
 			ArrayList<TF> tf_list = tf_map.get(Integer.toString(c));
@@ -185,11 +122,14 @@ public class GetTotalQuantNormSignalAroundFeature {
 				
 				for(int f = 0; f < tf_list.size(); f++){
 				
+					// Get the TF Feature
+					TF feature = tf_list.get(f);
+					
 					// Get the total signal output
-					double[] total_signal = get_total_signal_per_feature(tf_list.get(f), left_win, right_win, input_data);
+					double[] feature_signal = get_feature_output(feature, input_data, win);
 					
 					// Write the output
-					output.write(get_output_string(tf_list.get(f), total_signal));
+					feature.write_reads_output(output, feature_signal, 1);
 				
 				}
 					
