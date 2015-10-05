@@ -59,7 +59,7 @@ public class GetQuantNormSignalAroundFeature {
 		for(int p = start; p <= end; p++){
 			
 			// If p goes outside the boundary of the chromosome ends, enter a -1
-			if(p < 1 || p >= total_sig.length){
+			if(p < 1 || p >= mat.length){
 				total_sig[sig_idx] = -1;
 			}else{
 				total_sig[sig_idx] = mat[p];
